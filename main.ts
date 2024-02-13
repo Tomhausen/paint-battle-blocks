@@ -6,6 +6,7 @@ function fire (source: Sprite) {
     proj.image.fill(sprites.readDataNumber(source, "colour"))
     proj.setFlag(SpriteFlag.DestroyOnWall, true)
     proj.setPosition(source.x, source.y)
+    proj.lifespan = 5000
     return proj
 }
 function target_tile_not_owned (opponent: Sprite) {
@@ -23,7 +24,7 @@ function target_tile_not_owned (opponent: Sprite) {
     scene.followPath(opponent, path, opponent_speed)
 }
 controller.A.onEvent(ControllerButtonEvent.Pressed, function () {
-    fire(red)
+    fire(red).setVelocity(last_vx, last_vy)
 })
 function change_opponent_dir (opponent: Sprite) {
     if (opponent.vx != 0) {
@@ -53,6 +54,16 @@ info.onCountdownEnd(function () {
     } else {
         game.over(false)
     }
+})
+sprites.onOverlap(SpriteKind.Enemy, SpriteKind.Food, function (sprite, otherSprite) {
+    tile_image = sprites.readDataImage(sprite, "tile")
+    local_tiles = tilesAdvanced.getAdjacentTiles(Shapes.Square, sprite.tilemapLocation(), 2)
+    for (let value of local_tiles) {
+        if (!(tiles.tileAtLocationIsWall(value))) {
+            tiles.setTileAt(value, tile_image)
+        }
+    }
+    sprites.destroy(otherSprite)
 })
 scene.onHitWall(SpriteKind.Enemy, function (sprite, location) {
     change_opponent_dir(sprite)
@@ -92,6 +103,19 @@ function setup_map () {
         opponent_behaviour(value)
     }
 }
+sprites.onOverlap(SpriteKind.Player, SpriteKind.Food, function (sprite, otherSprite) {
+    tile_image = sprites.readDataImage(sprite, "tile")
+    local_tiles = tilesAdvanced.getAdjacentTiles(Shapes.Square, sprite.tilemapLocation(), 2)
+    for (let value of local_tiles) {
+        if (!(tiles.tileAtLocationIsWall(value))) {
+            tiles.setTileAt(value, tile_image)
+        }
+    }
+    sprites.destroy(otherSprite)
+})
+let random_tile: tiles.Location = null
+let star: Sprite = null
+let local_tiles: tiles.Location[] = []
 let greens = 0
 let blues = 0
 let reds = 0
@@ -105,6 +129,8 @@ let targets: tiles.Location[] = []
 let start: tiles.Location = null
 let proj: Sprite = null
 let opponent_speed = 0
+let last_vy = 0
+let last_vx = 0
 let red: Sprite = null
 red = sprites.create(assets.image`red player`, SpriteKind.Player)
 let blue = sprites.create(assets.image`blue player`, SpriteKind.Enemy)
@@ -115,8 +141,8 @@ sprites.setDataImageValue(green, "tile", assets.tile`green`)
 sprites.setDataNumber(red, "colour", 3)
 sprites.setDataNumber(blue, "colour", 6)
 sprites.setDataNumber(green, "colour", 9)
-let last_vx = 100
-let last_vy = 0
+last_vx = 100
+last_vy = 0
 opponent_speed = 75
 info.startCountdown(120)
 controller.moveSprite(red)
@@ -129,5 +155,17 @@ game.onUpdate(function () {
     if (red.vx != 0 || red.vy != 0) {
         last_vx = red.vx
         last_vy = red.vy
+    }
+})
+game.onUpdateInterval(10000, function () {
+    star = sprites.create(assets.image`star`, SpriteKind.Food)
+    star.lifespan = 7500
+    random_tile = tilesAdvanced.getAllTilesWhereWallIs(false)._pickRandom()
+    tiles.placeOnTile(star, random_tile)
+    for (let value of sprites.allOfKind(SpriteKind.Enemy)) {
+        if (randint(1, 5) == 1) {
+            path = scene.aStar(value.tilemapLocation(), star.tilemapLocation())
+            scene.followPath(value, path, opponent_speed)
+        }
     }
 })
