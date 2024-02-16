@@ -23,8 +23,14 @@ function target_tile_not_owned (opponent: Sprite) {
     path = scene.aStar(start, sorted_targets[0])
     scene.followPath(opponent, path, opponent_speed)
 }
+controller.combos.attachCombo("uu", function () {
+    dash()
+})
 controller.A.onEvent(ControllerButtonEvent.Pressed, function () {
     fire(red).setVelocity(last_vx, last_vy)
+})
+controller.combos.attachCombo("dd", function () {
+    dash()
 })
 function change_opponent_dir (opponent: Sprite) {
     if (opponent.vx != 0) {
@@ -45,6 +51,25 @@ sprites.onOverlap(SpriteKind.Enemy, SpriteKind.Projectile, function (sprite, oth
         sprites.destroy(otherSprite)
     }
 })
+controller.combos.attachCombo("rr", function () {
+    dash()
+})
+function dash () {
+    timer.throttle("dash", 2000, function () {
+        dash_time = 250
+        vx = red.vx
+        vy = red.vy
+        controller.moveSprite(red, 0, 0)
+        red.startEffect(effects.ashes, dash_time)
+        red.vx = vx * 2.5
+        red.vy = vy * 2.5
+        timer.after(dash_time, function () {
+            controller.moveSprite(red)
+            red.vx = 0
+            red.vy = 0
+        })
+    })
+}
 info.onCountdownEnd(function () {
     reds = tiles.getTilesByType(assets.tile`red`).length
     blues = tiles.getTilesByType(assets.tile`blue`).length
@@ -77,6 +102,9 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.Projectile, function (sprite, ot
         }
         sprites.destroy(otherSprite)
     }
+})
+controller.combos.attachCombo("ll", function () {
+    dash()
 })
 function opponent_behaviour (opponent: Sprite) {
     tile_image = sprites.readDataImage(opponent, "tile")
@@ -119,6 +147,9 @@ let local_tiles: tiles.Location[] = []
 let greens = 0
 let blues = 0
 let reds = 0
+let vy = 0
+let vx = 0
+let dash_time = 0
 let x_vel = 0
 let y_vel = 0
 let path: tiles.Location[] = []
